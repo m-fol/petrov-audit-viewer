@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fire alert check</title>
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--ink:#1c2430;--mut:#5d6b7c;--line:#d9dee5;--acc:#1d5fd1;--ok:#1a7f4b}
+@media (prefers-color-scheme:dark){:root{--bg:#14181e;--card:#1d232c;--ink:#e8edf3;--mut:#9aa8b8;--line:#2e3743;--acc:#6aa2ff;--ok:#49c486}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,Segoe UI,Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:8px 14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+header b{font-size:15px}
+button,select{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:6px;padding:5px 10px;cursor:pointer}
+button.primary{background:var(--acc);color:#fff;border-color:var(--acc)}
+.bar{flex:1;min-width:120px;height:8px;background:var(--line);border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ok)}
+main{max-width:1500px;margin:0 auto;padding:12px 14px}
+.meta{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-bottom:8px;color:var(--mut)}
+.meta a{color:var(--acc)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:10px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px}
+.panel h3{margin:0 0 6px;font-size:13px;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.imgbox{position:relative;width:100%;aspect-ratio:1/1;background:#222;border-radius:6px;overflow:hidden}
+.imgbox img{width:100%;height:100%;object-fit:cover;display:block}
+.ring{position:absolute;left:50%;top:50%;border:2px solid rgba(255,230,0,.9);border-radius:50%;transform:translate(-50%,-50%);pointer-events:none}
+.dot{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;background:rgba(255,230,0,.95);border-radius:50%;pointer-events:none}
+.cap{font-size:12px;color:var(--mut);margin-top:4px;min-height:32px}
+.warn{color:#b35a00}
+.none{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#ccc;text-align:center;padding:12px}
+.form{margin-top:10px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0}
+.row .lab{width:170px;font-weight:600}
+.opt{border:1px solid var(--line);border-radius:6px;padding:5px 10px;cursor:pointer;user-select:none}
+.opt.sel{background:var(--acc);color:#fff;border-color:var(--acc)}
+input[type=text]{flex:1;min-width:220px;font:inherit;padding:6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.help{font-size:12px;color:var(--mut);margin-top:6px}
+.small{font-size:12px;color:var(--mut)}
+</style>
+</head>
+<body>
+<header>
+  <b>Fire alert check</b>
+  <span id="pos"></span>
+  <div class="bar"><i id="barfill"></i></div>
+  <span id="donecount" class="small"></span>
+  <button id="prev">&larr; Prev</button>
+  <button id="next" class="primary">Next &rarr;</button>
+  <select id="jump"></select>
+  <button id="exp" title="Download your answers as CSV">Export CSV</button>
+</header>
+<main>
+  <div class="meta" id="meta"></div>
+  <div class="grid">
+    <div class="panel"><h3><span>BEFORE</span><span><button id="bprev">&lsaquo;</button> <button id="bnext">&rsaquo;</button></span></h3>
+      <div class="imgbox" id="bbox"></div><div class="cap" id="bcap"></div></div>
+    <div class="panel"><h3><span>AFTER</span><span><button id="aprev">&lsaquo;</button> <button id="anext">&rsaquo;</button></span></h3>
+      <div class="imgbox" id="abox"></div><div class="cap" id="acap"></div></div>
+    <div class="panel"><h3><span>BLINK (before &harr; after)</span><label class="small"><input type="checkbox" id="blink" checked> on</label></h3>
+      <div class="imgbox" id="kbox"></div><div class="cap" id="kcap">Look for what appears or changes at the centre.</div></div>
+    <div class="panel"><h3><span>BEFORE close-up (3&times; zoom, about 800 m across)</span></h3>
+      <div class="imgbox" id="bzbox"></div><div class="cap" id="bzcap">Same image as BEFORE, enlarged. Ring = 250 m. Pixels are 10 m, so no new detail, only easier to see.</div></div>
+    <div class="panel"><h3><span>AFTER close-up (3&times; zoom, about 800 m across)</span></h3>
+      <div class="imgbox" id="azbox"></div><div class="cap" id="azcap">Same image as AFTER, enlarged. Ring = 250 m.</div></div>
+    <div class="panel"><h3><span>GROUND close-up</span></h3>
+      <div class="imgbox" id="gbox"></div><div class="cap">Same area as the satellite images. What is the ground: field, grass, houses, factory?</div></div>
+    <div class="panel"><h3><span>GROUND wider (about 8 km across)</span></h3>
+      <div class="imgbox" id="wbox"></div><div class="cap">Context: fields, forest, town, front-line area.</div></div>
+  </div>
+  <div class="form">
+    <div class="row"><span class="lab">Fire or burn visible</span><span id="f_fire"></span></div>
+    <div class="row"><span class="lab">Land context</span><span id="f_land"></span></div>
+    <div class="row"><span class="lab">Likely cause</span><span id="f_cause"></span></div>
+    <div class="row"><span class="lab">Confidence</span><span id="f_conf"></span></div>
+    <div class="row"><span class="lab">Notes</span><input type="text" id="notes" placeholder="one line, optional"></div>
+    <div class="help">The yellow ring marks 1 km around the alert point. Use "unclear" whenever you are not sure; a wrong guess is worse than an honest "unclear". Your answers are saved automatically in this browser; use Export CSV regularly and send the CSV to Maria when finished.
+    Shortcuts: &larr; &rarr; move between alerts, R hides or shows the ring.</div>
+  </div>
+</main>
+<script src="data.js"></script>
+<script>
+(function(){
+var A = window.AUDIT, rows = A.rows, n = rows.length, KEY = "audit_" + A.sheet;
+var OPTS = {
+  fire_or_burn_visible:["yes","no","cannot_tell"],
+  land_context:["cropland","forest_grass","built_up","industrial","other"],
+  likely_cause:["agricultural","wildfire","industrial_static","military","unclear"],
+  confidence:["low","medium","high"]
+};
+var FIELDMAP = {fire_or_burn_visible:"f_fire",land_context:"f_land",likely_cause:"f_cause",confidence:"f_conf"};
+var ans = {};
+try { ans = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch(e) {}
+// seed from the CSV (if it was already partly filled)
+rows.forEach(function(r){ var a = ans[r.alert_id] || (ans[r.alert_id] = {});
+  Object.keys(OPTS).concat(["notes"]).forEach(function(k){ if(!a[k] && r[k]) a[k] = r[k]; }); });
+var i = parseInt((function(){try{return localStorage.getItem(KEY+"_pos")}catch(e){return 0}})()||"0",10) || 0;
+var bi = 0, ai = 0, ringOn = true, flip = 0;
+
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(ans)); localStorage.setItem(KEY+"_pos", String(i)); }catch(e){} }
+function isDone(r){ var a = ans[r.alert_id]||{}; return !!a.likely_cause && !!a.fire_or_burn_visible; }
+function img(box, src, ring, zoom){
+  box.innerHTML = "";
+  if(!src){ var d=document.createElement("div"); d.className="none"; d.textContent="No usable image found for this side. Use the Copernicus link above, or answer cannot_tell."; box.appendChild(d); return; }
+  var im = document.createElement("img"); im.src = src; if(zoom){ im.style.transform = "scale("+zoom+")"; } box.appendChild(im);
+  if(ring){ var half = box.dataset.km || A.half_km; var rr = document.createElement("div"); rr.className="ring"; rr.style.display = ringOn?"block":"none";
+    rr.style.width = rr.style.height = zoom ? (100*0.25*zoom/half)+"%" : (100*1.0/half)+"%"; box.appendChild(rr);
+    var dt = document.createElement("div"); dt.className="dot"; dt.style.display = ringOn?"block":"none"; box.appendChild(dt); }
+}
+function side(list, idx){ return list && list.length ? list[Math.min(idx, list.length-1)] : null; }
+function cap(el, rec, kind, list, idx){
+  if(!rec){ el.innerHTML = "<span class='warn'>No clear Sentinel-2 pass found within 45 days.</span>"; return; }
+  var s = "<b>"+rec.date+"</b> &middot; scene cloud "+rec.scene_cloud+"% &middot; cloud/snow-like near point "+rec.local_bright+"%";
+  if(list.length>1) s += " &middot; option "+(idx+1)+" of "+list.length;
+  if(rec.note) s += "<br><span class='warn'>"+rec.note+"</span>";
+  else if(rec.local_bright>10) s += "<br><span class='warn'>Some cloud near the point; check the other option.</span>";
+  el.innerHTML = s;
+}
+function render(){
+  var r = rows[i], m = A.meta[r.alert_id] || {before:[],after:[]};
+  document.getElementById("pos").textContent = "Alert " + (i+1) + " / " + n;
+  var done = rows.filter(isDone).length;
+  document.getElementById("donecount").textContent = done + " done";
+  document.getElementById("barfill").style.width = (100*done/n)+"%";
+  document.getElementById("jump").value = String(i);
+  document.getElementById("meta").innerHTML = "<span><b>"+r.alert_id+"</b></span><span>Alert date: <b>"+r.date+"</b></span><span>"+r.lat+", "+r.lon+"</span>"
+    + "<a href='"+r.eo_browser+"' target='_blank'>Open in Copernicus Browser</a><a href='"+r.satellite_map+"' target='_blank'>Open in Google Maps</a>";
+  var base = "images/"+r.alert_id+"/";
+  var br = side(m.before, bi), ar = side(m.after, ai);
+  img(document.getElementById("bbox"), br && base+br.file, true); cap(document.getElementById("bcap"), br, "before", m.before||[], bi);
+  img(document.getElementById("abox"), ar && base+ar.file, true); cap(document.getElementById("acap"), ar, "after", m.after||[], ai);
+  img(document.getElementById("bzbox"), br && base+br.file, true, 3);
+  img(document.getElementById("azbox"), ar && base+ar.file, true, 3);
+  img(document.getElementById("gbox"), m.ground && base+"ground.jpg", true);
+  var wb = document.getElementById("wbox"); wb.dataset.km = A.wide_km;
+  img(wb, m.wide && base+"wide.jpg", true);
+  blinkRender();
+  buildForm();
+  document.getElementById("notes").value = (ans[r.alert_id]||{}).notes || "";
+  save();
+}
+function blinkRender(){
+  var r = rows[i], m = A.meta[r.alert_id]||{}, base="images/"+r.alert_id+"/";
+  var br = side(m.before,bi), ar = side(m.after,ai);
+  var rec = (flip%2===0) ? br : ar, lab = (flip%2===0) ? "BEFORE" : "AFTER";
+  var box = document.getElementById("kbox");
+  img(box, rec && base+rec.file, true);
+  document.getElementById("kcap").innerHTML = rec ? "<b>"+lab+"</b> &middot; "+rec.date : "No image";
+}
+function buildForm(){
+  var a = ans[rows[i].alert_id] || (ans[rows[i].alert_id]={});
+  Object.keys(OPTS).forEach(function(k){
+    var host = document.getElementById(FIELDMAP[k]); host.innerHTML = "";
+    OPTS[k].forEach(function(v){
+      var s = document.createElement("span"); s.className = "opt"+(a[k]===v?" sel":""); s.textContent = v;
+      s.onclick = function(){ a[k] = (a[k]===v) ? "" : v; save(); buildForm(); var d=rows.filter(isDone).length; document.getElementById("donecount").textContent = d+" done"; document.getElementById("barfill").style.width=(100*d/n)+"%"; };
+      host.appendChild(s);
+    });
+  });
+}
+function go(d){ i = Math.max(0, Math.min(n-1, i+d)); bi=0; ai=0; render(); window.scrollTo(0,0); }
+document.getElementById("prev").onclick = function(){ go(-1); };
+document.getElementById("next").onclick = function(){ go(1); };
+document.getElementById("bprev").onclick = function(){ var l=(A.meta[rows[i].alert_id]||{}).before||[]; if(l.length){ bi=(bi-1+l.length)%l.length; render(); } };
+document.getElementById("bnext").onclick = function(){ var l=(A.meta[rows[i].alert_id]||{}).before||[]; if(l.length){ bi=(bi+1)%l.length; render(); } };
+document.getElementById("aprev").onclick = function(){ var l=(A.meta[rows[i].alert_id]||{}).after||[]; if(l.length){ ai=(ai-1+l.length)%l.length; render(); } };
+document.getElementById("anext").onclick = function(){ var l=(A.meta[rows[i].alert_id]||{}).after||[]; if(l.length){ ai=(ai+1)%l.length; render(); } };
+document.getElementById("notes").oninput = function(e){ (ans[rows[i].alert_id]||(ans[rows[i].alert_id]={})).notes = e.target.value; save(); };
+var sel = document.getElementById("jump");
+rows.forEach(function(r,k){ var o=document.createElement("option"); o.value=String(k); o.textContent=(k+1)+" - "+r.date; sel.appendChild(o); });
+sel.onchange = function(){ i = parseInt(sel.value,10); bi=0; ai=0; render(); };
+document.addEventListener("keydown", function(e){
+  if(e.target.tagName==="INPUT") return;
+  if(e.key==="ArrowRight") go(1); else if(e.key==="ArrowLeft") go(-1);
+  else if(e.key==="r"||e.key==="R"){ ringOn=!ringOn; render(); }
+});
+setInterval(function(){ if(document.getElementById("blink").checked){ flip++; blinkRender(); } }, 900);
+function esc(v){ v = (v==null?"":String(v)); return /[",\n\r]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
+document.getElementById("exp").onclick = function(){
+  var out = [A.fields.join(",")];
+  rows.forEach(function(r){ var a = ans[r.alert_id]||{};
+    out.push(A.fields.map(function(f){ return esc(f in OPTS || f==="notes" ? (a[f]||"") : r[f]); }).join(",")); });
+  var blob = new Blob(["﻿"+out.join("\r\n")+"\r\n"], {type:"text/csv"});
+  var u = URL.createObjectURL(blob), el = document.createElement("a");
+  el.href = u; el.download = A.sheet; document.body.appendChild(el); el.click(); el.remove();
+};
+render();
+})();
+</script>
+</body>
+</html>

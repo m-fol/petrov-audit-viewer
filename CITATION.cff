@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Audit viewer for blind visual checks of satellite fire alerts"
+type: software
+version: "1.0.0"
+date-released: "2026-11-24"
+license: MIT
+authors:
+  - family-names: "Folina"
+    given-names: "Maria-Theodora"
+    affiliation: "Democritus University of Thrace"
+abstract: "A local web page and image builder for annotators who judge satellite fire alerts from before and after Sentinel-2 images, used for the human label check in 'Not Observed Is Not Calm: Where Open Sensors Go Blind and How to Verify Alerts for C2' (ICMCIS 2027 submission)."
