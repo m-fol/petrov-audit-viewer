@@ -36,6 +36,8 @@ main{max-width:1500px;margin:0 auto;padding:12px 14px}
 input[type=text]{flex:1;min-width:220px;font:inherit;padding:6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
 .help{font-size:12px;color:var(--mut);margin-top:6px}
 .small{font-size:12px;color:var(--mut)}
+#banner{display:none;max-width:1500px;margin:10px auto 0;padding:10px 14px;background:var(--card);border:1px solid var(--line);border-radius:8px;font-size:13px;color:var(--ink)}
+#banner a{color:var(--acc)}
 </style>
 </head>
 <body>
@@ -49,6 +51,7 @@ input[type=text]{flex:1;min-width:220px;font:inherit;padding:6px;border:1px soli
   <select id="jump"></select>
   <button id="exp" title="Download your answers as CSV">Export CSV</button>
 </header>
+<div id="banner"></div>
 <main>
   <div class="meta" id="meta"></div>
   <div class="grid">
@@ -62,10 +65,10 @@ input[type=text]{flex:1;min-width:220px;font:inherit;padding:6px;border:1px soli
       <div class="imgbox" id="bzbox"></div><div class="cap" id="bzcap">Same image as BEFORE, enlarged. Ring = 250 m. Pixels are 10 m, so no new detail, only easier to see.</div></div>
     <div class="panel"><h3><span>AFTER close-up (3&times; zoom, about 800 m across)</span></h3>
       <div class="imgbox" id="azbox"></div><div class="cap" id="azcap">Same image as AFTER, enlarged. Ring = 250 m.</div></div>
-    <div class="panel"><h3><span>GROUND close-up</span></h3>
-      <div class="imgbox" id="gbox"></div><div class="cap">Same area as the satellite images. What is the ground: field, grass, houses, factory?</div></div>
-    <div class="panel"><h3><span>GROUND wider (about 8 km across)</span></h3>
-      <div class="imgbox" id="wbox"></div><div class="cap">Context: fields, forest, town, front-line area.</div></div>
+    <div class="panel"><h3><span id="gtitle">GROUND close-up</span></h3>
+      <div class="imgbox" id="gbox"></div><div class="cap" id="gcap">Same area as the satellite images. What is the ground: field, grass, houses, factory?</div></div>
+    <div class="panel"><h3><span id="wtitle">GROUND wider (about 8 km across)</span></h3>
+      <div class="imgbox" id="wbox"></div><div class="cap" id="wcap">Context: fields, forest, town, front-line area.</div></div>
   </div>
   <div class="form">
     <div class="row"><span class="lab">Fire or burn visible</span><span id="f_fire"></span></div>
@@ -100,7 +103,7 @@ function save(){ try{ localStorage.setItem(KEY, JSON.stringify(ans)); localStora
 function isDone(r){ var a = ans[r.alert_id]||{}; return !!a.likely_cause && !!a.fire_or_burn_visible; }
 function img(box, src, ring, zoom){
   box.innerHTML = "";
-  if(!src){ var d=document.createElement("div"); d.className="none"; d.textContent="No usable image found for this side. Use the Copernicus link above, or answer cannot_tell."; box.appendChild(d); return; }
+  if(!src){ var d=document.createElement("div"); d.className="none"; d.textContent=box.dataset.msg||"No usable image found for this side. Use the Copernicus link above, or answer cannot_tell."; box.appendChild(d); return; }
   var im = document.createElement("img"); im.src = src; if(zoom){ im.style.transform = "scale("+zoom+")"; } box.appendChild(im);
   if(ring){ var half = box.dataset.km || A.half_km; var rr = document.createElement("div"); rr.className="ring"; rr.style.display = ringOn?"block":"none";
     rr.style.width = rr.style.height = zoom ? (100*0.25*zoom/half)+"%" : (100*1.0/half)+"%"; box.appendChild(rr);
@@ -130,8 +133,9 @@ function render(){
   img(document.getElementById("abox"), ar && base+ar.file, true); cap(document.getElementById("acap"), ar, "after", m.after||[], ai);
   img(document.getElementById("bzbox"), br && base+br.file, true, 3);
   img(document.getElementById("azbox"), ar && base+ar.file, true, 3);
+  document.getElementById("gbox").dataset.msg = "View not available for this alert.";
   img(document.getElementById("gbox"), m.ground && base+"ground.jpg", true);
-  var wb = document.getElementById("wbox"); wb.dataset.km = A.wide_km;
+  var wb = document.getElementById("wbox"); wb.dataset.km = A.wide_km; wb.dataset.msg = "View not available for this alert.";
   img(wb, m.wide && base+"wide.jpg", true);
   blinkRender();
   buildForm();
@@ -183,6 +187,8 @@ document.getElementById("exp").onclick = function(){
   var u = URL.createObjectURL(blob), el = document.createElement("a");
   el.href = u; el.download = A.sheet; document.body.appendChild(el); el.click(); el.remove();
 };
+if(A.ground_title){document.getElementById("gtitle").textContent=A.ground_title; document.getElementById("gcap").textContent=A.ground_caption||""; document.getElementById("wtitle").textContent=A.wide_title; document.getElementById("wcap").textContent=A.wide_caption||"";}
+if(A.banner){var bn=document.getElementById("banner"); bn.innerHTML=A.banner; bn.style.display="block";}
 render();
 })();
 </script>

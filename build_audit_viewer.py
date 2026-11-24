@@ -1,6 +1,6 @@
 """Pre-load imagery for the label audit and build a local labelling page.
 
-usage: python build_audit_viewer.py <sheet.csv> <out_dir> [--limit N] [--exclude-unusable] [--no-basemap]
+usage: python build_audit_viewer.py <sheet.csv> <out_dir> [--limit N] [--exclude-unusable] [--no-basemap | --open-context]
 
 For every alert in the sheet it fetches (no account needed):
   - up to 3 clear Sentinel-2 L2A true-colour crops BEFORE the alert date and up to 3 ON/AFTER it
@@ -23,6 +23,9 @@ PX = 700
 WINDOW_D = 45
 GOOD_BRIGHT = 0.25   # local cloud/snow-like fraction
 SES = requests.Session()
+OPEN_TITLES = {"ground_title": "LAND COVER (ESA WorldCover 2021, 10 m)", "wide_title": "WIDER VIEW (about 8 km, Sentinel-2 true colour)",
+               "ground_caption": "What is the ground? Dark green trees, orange shrub, yellow grass, pink cropland, red built-up, grey bare, blue water, teal wetland. Yellow ring = 1 km.",
+               "wide_caption": "Context from the clearest image near the alert date: fields, forest, town."}
 
 
 def box(lat, lon, km):
@@ -120,6 +123,42 @@ def pick(cands, lat, lon, out, tag, imgdir):
     return res
 
 
+def render_box(item_id, collection, lat, lon, km, extra):
+    bb = box(lat, lon, km)
+    prm = {"collection": collection, "item": item_id, "nodata": 0}
+    prm.update(extra)
+    r = get(DATA % (bb + (PX, PX)), params=prm)
+    if r is None or r.status_code != 200:
+        return None
+    return Image.open(io.BytesIO(r.content)).convert("RGB")
+
+
+def context_views(lat, lon, day, meta, imgdir):
+    """Open-data context views instead of the Esri basemap: ESA WorldCover land cover (close-up) -> ground.jpg and a wider Sentinel-2 true-colour view -> wide.jpg."""
+    ok_g = ok_w = False
+    try:
+        r = SES.post(STAC, json={"collections": ["esa-worldcover"], "bbox": [lon - 0.001, lat - 0.001, lon + 0.001, lat + 0.001], "limit": 10}, timeout=60)
+        feats = sorted(r.json().get("features", []), key=lambda f: f["properties"].get("start_datetime", ""), reverse=True)
+        if feats:
+            im = render_box(feats[0]["id"], "esa-worldcover", lat, lon, HALF_KM, {"assets": "map", "colormap_name": "esa-worldcover"})
+            if im is not None:
+                im.save(os.path.join(imgdir, "ground.jpg"), quality=90)
+                ok_g = True
+    except Exception:
+        pass
+    ref = (meta["before"] or meta["after"] or [None])[0]
+    if ref is not None:
+        feats = search(lat, lon, ref["date"], ref["date"])
+        feats = sorted(feats, key=lambda f: f["properties"]["eo:cloud_cover"])
+        for f in feats:
+            im = render_box(f["id"], "sentinel-2-l2a", lat, lon, WIDE_KM / 2, {"assets": "visual", "asset_bidx": "visual|1,2,3"})
+            if im is not None:
+                im.save(os.path.join(imgdir, "wide.jpg"), quality=88)
+                ok_w = True
+                break
+    return ok_g, ok_w
+
+
 def process(row, outdir):
     aid = row["alert_id"]
     lat, lon = float(row["lat"]), float(row["lon"])
@@ -136,7 +175,9 @@ def process(row, outdir):
     before = sorted([(k, v) for k, v in bydate.items() if k < day.isoformat()], key=lambda x: x[0], reverse=True)
     after = sorted([(k, v) for k, v in bydate.items() if k >= day.isoformat()], key=lambda x: x[0])
     meta = {"before": pick(before, lat, lon, None, "before", imgdir), "after": pick(after, lat, lon, None, "after", imgdir)}
-    if "--no-basemap" in sys.argv:   # skip the Esri World Imagery views (check Esri's terms before using them)
+    if "--open-context" in sys.argv:   # ESA WorldCover and a wider Sentinel-2 view instead of the Esri basemap (open data)
+        meta["ground"], meta["wide"] = context_views(lat, lon, day, meta, imgdir)
+    elif "--no-basemap" in sys.argv:   # skip the Esri World Imagery views (check Esri's terms before using them)
         meta["ground"] = meta["wide"] = False
     else:
         meta["ground"] = basemap(lat, lon, HALF_KM, os.path.join(imgdir, "ground.jpg"))
@@ -176,6 +217,8 @@ def main():
         rows = [r for r, _, _ in keep]
     data = {"sheet": os.path.basename(sheet), "fields": fields, "rows": rows, "meta": metas,
             "half_km": HALF_KM, "wide_km": WIDE_KM}
+    if "--open-context" in sys.argv:
+        data.update(OPEN_TITLES)
     open(os.path.join(outdir, "data.js"), "w", encoding="utf-8").write("window.AUDIT = " + json.dumps(data) + ";")
     tpl = os.path.join(os.path.dirname(os.path.abspath(__file__)), "audit_viewer_template.html")
     open(os.path.join(outdir, "index.html"), "w", encoding="utf-8").write(open(tpl, encoding="utf-8").read())

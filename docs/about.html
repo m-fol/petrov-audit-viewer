@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>About the audit viewer for satellite fire alerts</title>
+<meta name="description" content="A local tool for blind visual checks of satellite fire alerts: before and after Sentinel-2 images, blink view, close-ups, and four answers per alert.">
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1b2430;--mut:#59677a;--line:#d8dde4;--acc:#1d5fd1}
+@media (prefers-color-scheme:dark){:root{--bg:#14181e;--card:#1d232c;--ink:#e8edf3;--mut:#9aa8b8;--line:#2e3743;--acc:#6aa2ff}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,Segoe UI,Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:32px 16px 64px}
+h1{font-size:1.8rem;line-height:1.2;margin:0 0 8px}
+h2{font-size:1.15rem;margin:32px 0 8px}
+p,li{color:var(--ink)}
+.lead{color:var(--mut);font-size:1.05rem}
+a{color:var(--acc)}
+.btn{display:inline-block;background:var(--acc);color:#fff;text-decoration:none;padding:10px 16px;border-radius:8px;margin:8px 8px 8px 0}
+.btn.sec{background:transparent;color:var(--acc);border:1px solid var(--acc)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:12px 0}
+code{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.92em}
+footer{margin-top:40px;color:var(--mut);font-size:.9rem}
+</style>
+</head>
+<body>
+<main>
+<h1>Audit viewer for satellite fire alerts</h1>
+<p class="lead">A small, local tool for annotators who judge satellite fire alerts by eye. For each alert it shows clear Sentinel-2 images from before and after the alert date, a blink view, 3&times; close-ups, and records four answers: fire visible, land context, likely cause and confidence.</p>
+<p><a class="btn" href="index.html">Open the example website (80 alerts)</a><a class="btn sec" id="repo" href="#">Source code and downloads</a></p>
+
+<h2>The example website</h2>
+<p>The main page of this site is the page two annotators used for the human check: 80 alerts from eastern Ukraine, each with clear Sentinel-2 images from before and after the alert date. The answers have been removed, so you can try it as an annotator. The two context panels here use open data (an ESA WorldCover land-cover map and a wider Sentinel-2 view); the study itself used basemap views from a commercial imagery service, which are not included for licence reasons.</p>
+
+<h2>What it is for</h2>
+<p>Satellite fire detections say that something was hot, not why. The viewer supports a blind check of why: annotators compare images from before and after the alert and choose a cause (agricultural, wildfire, industrial or static, military, or unclear). It was used for the human label check in the paper
+<em>Not Observed Is Not Calm: Where Open Sensors Go Blind and How to Verify Alerts for C2</em> (ICMCIS 2027 submission).</p>
+<div class="card"><strong>Honest limits.</strong> Sentinel-2 pixels are 10&nbsp;m. Small burns, craters and vehicles are usually not visible, so many answers are legitimately &ldquo;unclear&rdquo;. In the study the two annotators agreed little (Cohen&rsquo;s kappa 0.13 for the cause). The tool is an instrument, not evidence that ten-metre images settle the cause of a fire.</div>
+
+<h2>How to use it for your own alerts</h2>
+<ol>
+<li>Download the repository and install the requirements (<code>pip install -r requirements.txt</code>).</li>
+<li>Make a CSV like <code>example/alerts_example.csv</code> (columns <code>alert_id, date, lat, lon</code> plus empty answer columns).</li>
+<li>Run <code>python build_audit_viewer.py my_alerts.csv my_viewer --exclude-unusable</code>. Images come from the public Microsoft Planetary Computer; no account is needed.</li>
+<li>Give the annotator the output folder. They open <code>index.html</code>, answer, and click <em>Export CSV</em> once at the end.</li>
+</ol>
+
+<h2>Privacy</h2>
+<p>This site has no server, no analytics and no account. On the example website, answers are kept only in your own browser (local storage) and are never sent anywhere. Use <em>Export CSV</em> to keep them.</p>
+
+<h2>Data and terms</h2>
+<p>The images contain modified Copernicus Sentinel-2 data (2022 to 2024), free and open under the Copernicus data policy, and the land-cover panels use ESA WorldCover 2021 (CC BY 4.0, &copy; ESA WorldCover consortium). The tool can also fetch basemap views from the Esri World Imagery service; they are not included here, and you should check Esri&rsquo;s terms before using or sharing them.</p>
+
+<footer>Code under the MIT licence. See <code>CITATION.cff</code> in the repository to cite it.</footer>
+</main>
+<script>
+// Link "Source code" to the repository this site belongs to (GitHub Pages: user.github.io/repo/).
+try{
+  var h=location.hostname, p=location.pathname.split('/').filter(Boolean);
+  if(h.endsWith('.github.io')&&p.length){document.getElementById('repo').href='https://github.com/'+h.split('.')[0]+'/'+p[0];}
+  else{document.getElementById('repo').style.display='none';}
+}catch(e){}
+</script>
+</body>
+</html>
