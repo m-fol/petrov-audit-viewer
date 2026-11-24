@@ -35,7 +35,3 @@ No answers or labels are included. The only imagery is the Sentinel-2 before/aft
 
 ## Citation
 See `CITATION.cff`. Licence: MIT (code) for the files here; the annotator guide may be reused with attribution.
-
-## Website (GitHub Pages)
-The `docs/` folder is a ready-made static site: its main page is the viewer with the 80 study alerts (answers removed), and `about.html` describes the tool. To publish it, push the repository to GitHub, open Settings, then Pages, and choose "Deploy from a branch", branch `main`, folder `/docs`. The site will be at `https://YOUR-USERNAME.github.io/REPOSITORY/`.
-The site has no server and collects nothing; answers stay in the visitor's browser.
